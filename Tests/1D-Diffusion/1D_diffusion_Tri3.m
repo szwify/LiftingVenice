@@ -46,7 +46,6 @@ xmax=1.;
      line(the_coor(connect(e,:),1),the_coor(connect(e,:),2)); hold on;
  end
 
- 
 mesh=FEmesh(the_coor,connect);
 %%
 
