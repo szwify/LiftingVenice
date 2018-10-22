@@ -28,6 +28,7 @@ switch Operator
         n_row=tot_dof;
         n_col=tot_dof;
     
+        
 end
 
 K=sparse(n_row,n_col); 
