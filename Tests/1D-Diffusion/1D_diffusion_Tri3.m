@@ -25,7 +25,7 @@ xmax=1.;
   the_coor=vert; 
   
 
-    figure;
+    figure(1);
     patch('faces',tria(:,1:3),'vertices',vert, ...
         'facecolor','w', ...
         'edgecolor',[.2,.2,.2]) ;
