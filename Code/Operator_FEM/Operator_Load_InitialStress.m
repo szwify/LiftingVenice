@@ -2,7 +2,6 @@
 %> @brief Provide nodal force terms associated with a pre-stress for
 %> the elasticity eq.
 %
-%> It overload  the K_Elt_Int method of the Operator_Elasticity class to provide elt nodal force  vector
 %>
 %>
 %> The Bi-Linear form is :
@@ -13,12 +12,13 @@
 %>
 %> f_el= \int_Elt B'* sigma_o d Elt
 %---------------------------------------------------------------------
-classdef Operator_Load_InitialStress < Operator_Elasticity
-    %
+classdef Operator_Load_InitialStress 
     
     properties
         %> A given pre-stress field on the element (ct on the element)
         Stress_field;
+      
+        EltObject;
         % todo - make modification to have different value at each Gauss
         % Points...
     end
@@ -29,14 +29,12 @@ classdef Operator_Load_InitialStress < Operator_Elasticity
         %------------------------------------------------------------------
         %> @brief Class Constructor
         %> @param EltObject : Element object
-        %> @param PropObject   : a properties object containing 'cond'
-        %> properties
-        %> @param ndof : number of dof per nodes
         %> @param Sig : element pre-stress field
         %------------------------------------------------------------------
-        function obj=Operator_Load_InitialStress(EltObject,Prop,Sig)
+        function obj=Operator_Load_InitialStress(EltObject,Sig)
             
-            obj=obj@Operator_Elasticity(EltObject,Prop);
+            obj.EltObject=EltObject;
+
             obj.Stress_field=Sig;
             
         end

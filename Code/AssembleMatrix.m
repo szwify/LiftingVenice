@@ -27,7 +27,6 @@ switch Operator
         tot_dof = length(ID_array(:));
         n_row=tot_dof;
         n_col=tot_dof;
-    
         
 end
 

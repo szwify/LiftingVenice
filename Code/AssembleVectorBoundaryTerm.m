@@ -1,4 +1,4 @@
-function [F]=AssembleVector(meshObj,Geometry,Operator,ValueList,ID_array,IntegrationOrder)
+function [F]=AssembleVectorBoundaryTerm(meshObj,Geometry,Operator,ValueList,ID_array,IntegrationOrder)
 
 % ValueList
 % either
@@ -24,6 +24,7 @@ switch Operator
             disp('Error in boundary value input');
             abort()
         end
+        
 end
 
 disp('number of segments with applied Neumann BC: ' );
