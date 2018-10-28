@@ -1,10 +1,29 @@
 function [K,ID_array]=AssembleMatrix(meshObj,Geometry,Operator,PropertiesList,IntegrationOrder)
+% Inputs
+%
+% meshObj :: a mesh object with nodes coor and connectivity etc. (created
+% with FEmesh
+% Geometry :: string either '2D' (for plane strain), 'Axis' for
+% axisymmetric problem
+% Operator :: String depicting the corresponding PDE operator 
+% PropertiesList: list of either stiffness matrix, or relevant properties -
+% of length equal to the number of different material in the mesh
+% IntegrationOrder :: gauss integration order
+%
+% Outputs:
+% 
+% K :: the global stiffness matrix (sparse)
+% ID_array :: the id array (not in the case of coupling, we output only the
+% elastic ID_array)
+%
+%
+% Restrictions : 2D problem supported only 
 
-nnodes=meshObj.n_nodes;
 
 switch Operator
     case 'Laplacian'
-        
+        nnodes=meshObj.n_nodes;
+
         ndof = 1;
         max_eqn_numb=ndof*nnodes;
         ID_array=reshape([1:max_eqn_numb]',ndof,nnodes)';
@@ -13,6 +32,8 @@ switch Operator
         n_col=tot_dof;
         
     case 'Mass'
+        nnodes=meshObj.n_nodes;
+
         ndof = 1;
         max_eqn_numb=ndof*nnodes;
         ID_array=reshape([1:max_eqn_numb]',ndof,nnodes)';
@@ -21,6 +42,8 @@ switch Operator
         n_col=tot_dof;
         
     case 'Elasticity'
+        nnodes=meshObj.n_nodes;
+
         ndof = 2; % number of dof per nodes
         max_eqn_numb=ndof*nnodes;
         ID_array=reshape([1:max_eqn_numb]',ndof,nnodes)';
@@ -46,15 +69,15 @@ for e=1:meshObj.Nelts
     mycoor=meshObj.XY(local_ien,:);
     
     switch meshObj.EltType{e}
-        case 'Seg'
+        case 'Seg2'
             
             local_elt=Element_Seg2(Geometry,mycoor,local_ien); %,e
             
-        case 'Qua'
+        case 'Qua4'
             
             local_elt=Element_Qua4(Geometry,mycoor,local_ien);
             
-        case 'Tri'
+        case 'Tri3'
 %             
             local_elt=Element_Tri3(Geometry,mycoor,local_ien);
             

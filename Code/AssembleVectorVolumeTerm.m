@@ -1,9 +1,28 @@
 function [F]=AssembleVectorVolumeTerm(meshObj,Geometry,Operator,ValueList,ID_array,IntegrationOrder)
+% Inputs
+%
+% meshObj :: a mesh object with nodes coor and connectivity etc. (created
+% with FEmesh
+% Geometry :: string either '2D' (for plane strain), 'Axis' for
+% axisymmetric problem
+% Operator :: String depicting the corresponding PDE operator
+% ('InitialStress')
+% ValueList a matrix with the corresponding body forces term element by
+% element
+% e.g. for initial stress in 2D [Sxx Syy Sxy]    (with either 1 or Nelts
+% row)
+%
+% ID_array :: the id array
+% IntegrationOrder :: gauss integration order
+%
+% Outputs:
+%
+% F :: the global force vector (sparse)
+%
+% Restrictions : 2D problem supported only 
 
 % ValueList
-% either
-% [dof node1 intensity1 node2   intensity2 ] -- we assume therefore that the Load varies as the element order
-% we assume that we have adjacent nodes (node1 node2)... (such that we get it define an element edge)..
+
 
 nnodes=meshObj.n_nodes;
 
@@ -60,23 +79,21 @@ for e=1:meshObj.Nelts
         neq_row=[neq_row ID_array(local_ien(i),:)];
     end
     
-    
     mycoor=meshObj.XY(local_ien,:);
     
     switch meshObj.EltType{e}
-        case 'Seg'
+        case 'Seg2'
             
             local_elt=Element_Seg2(Geometry,mycoor,local_ien); %,e
             
-        case 'Qua'
+        case 'Qua4'
             
             local_elt=Element_Qua4(Geometry,mycoor,local_ien);
             
-        case 'Tri'
+        case 'Tri3'
             %
             local_elt=Element_Tri3(Geometry,mycoor,local_ien);
-      
-            
+                 
     end
     
     if (nr~=1)

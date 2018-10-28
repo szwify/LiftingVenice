@@ -119,12 +119,12 @@ classdef  FEmesh
                 aux=find(obj.conn(e,:)~=-1); %%% -1 denotes no node there in ien
                 switch length(aux)
                     case 2
-                        EltType{e}='Seg';
+                        EltType{e}='Seg2';
                     case 3
-                        EltType{e}='Tri';
+                        EltType{e}='Tri3';
                     case 4
                         if (obj.dim==2)
-                            EltType{e}='Qua';
+                            EltType{e}='Qua4';
                         else
                             if (obj.dim==3)
                                 EltType{e}='Tetra';

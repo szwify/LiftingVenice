@@ -37,14 +37,14 @@ for e=1:mesh.Nelts
 
     switch mesh.EltType{e}
         
-        case 'Seg'
+        case 'Seg2'
              local_elt=Element_Seg2(Geometry,mycoor,local_ien); %,e
             
-        case 'Qua'
+        case 'Qua4'
             
              local_elt=Element_Qua4(Geometry,mycoor,local_ien);
             
-        case 'Tri'
+        case 'Tri3'
             
             local_elt=Element_Tri3(Geometry,mycoor,local_ien);
             

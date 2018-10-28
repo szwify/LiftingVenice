@@ -1,9 +1,23 @@
 function [F]=AssembleVectorBoundaryTerm(meshObj,Geometry,Operator,ValueList,ID_array,IntegrationOrder)
-
-% ValueList
-% either
+% Inputs
+%
+% meshObj :: a mesh object with nodes coor and connectivity etc. (created
+% with FEmesh
+% Geometry :: string either '2D' (for plane strain), 'Axis' for
+% axisymmetric problem
+% Operator :: String depicting the corresponding PDE operator 
+% ValueList a matrix with the corresponding load intensity
+% 
 % [dof node1 intensity1 node2   intensity2 ] -- we assume therefore that the Load varies as the element order
-% we assume that we have adjacent nodes (node1 node2)... (such that we get it define an element edge)..
+% we assume that we have adjacent nodes (node1 node2)... (such that it define an element edge)..
+% ID_array :: the id array
+% IntegrationOrder :: gauss integration order
+%
+% Outputs:
+%
+% F :: the global force vector (sparse)
+%
+% Restrictions : 2D problem supported only 
 
 nnodes=meshObj.n_nodes;
 
