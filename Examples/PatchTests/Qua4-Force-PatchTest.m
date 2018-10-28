@@ -1,6 +1,5 @@
 % implementation of QU4 element for plane-strain elasticity
 
-
 %  IMPOSED FORCE PATCH TEST ON 4 QUA4
 % create a regular Qua4 grid  of 4 elements for this patch test
 
@@ -26,6 +25,7 @@ for i=1:length(ys)
     k=k+length(ys);
     
 end
+
 % create the corresponding connectivity table
 connect=zeros(ne_t,4);
 e=1;
@@ -34,7 +34,6 @@ for ey=1:ne_y
        connect(e,1:4)=[ex+(ey-1)*(ne_x+1), ex+1+(ey-1)*(ne_x+1), (ex+1)+(ey)*(ne_x+1), (ex)+(ey)*(ne_x+1)];   
        e=e+1;
     end
-   
 end
 
 % just perturb the location of the middle node
@@ -48,53 +47,37 @@ the_coor(5,:)=the_coor(5,:)+[random('norm',0.,pert) random('norm',0.,pert)]
      line(the_coor(connect(e,:),1),the_coor(connect(e,:),2)); hold on;
  end
 
-
-objN=FEnode(the_coor); % obj FEnode
-
-Ien = connect;
-
-% add a FEM On it and interpolation
-mat_zones=ones(length(Ien(:,1))); %single material
-myPk=1;
-mesh_fem=Mesh_with_a_FEM(myPk,objN,Ien,mat_zones); % linear FE
+mesh=FEmesh(the_coor,connect);
 
 % MATERIAL PROPERTIES
 % all stiffness in MPa, 
 
 k=4.2e3;
 g=3.1e3; 
-
-propObject=Properties_Elastic_Isotropic(k,g,1.);
+L_elas=Elastic_Isotropic_Stiffness(k,g,'PlaneStrain');
+ 
+% Elasticity problem  1D plane-strain axisymmetry 
+% ProblemType='Elasticity';
+Config='2D';
 
 % Elasticity problem  1D plane-strain axisymmetry 
 % ProblemType='Elasticity';
-Config='PlaneStrain';
-
-dof_h=DOF_handle(mesh_fem,2,'Matrix');  % the dof_handle
-
 
 % impose displacement .... block bottom y_dof and
-kti=find(the_coor(:,2)==0.);
+kti=find(mesh.XY(:,2)==0.);
 Imp_displacement=[ ];
 for i=1:length(kti)
     Imp_displacement =[Imp_displacement; kti(i) 2 0.];
 end
 
 % block x_dof for x==0.
-kti=find(the_coor(:,1)==0.);
+kti=find(mesh.XY(:,1)==0.);
 for i=1:length(kti)
     Imp_displacement =[Imp_displacement; kti(i) 1 0.];
 end
-
-% block x_dof for x==xmax
-% kti=find(the_coor(:,1)==xmax);
-% for i=1:length(kti)
-%     Imp_displacement =[Imp_displacement; kti(i) 1 0.];
-% end
-      
-
+ 
 % top vertical load, we set the load by segment 
-ktl=find(the_coor(:,2)==ymax);
+ktl=find(mesh.XY(:,2)==ymax);
 Boundary_loads = [ ]; 
 %[ dof_dim  node1 value1 node2 value2]
 for i=1:length(ktl)-1
@@ -102,29 +85,69 @@ for i=1:length(ktl)-1
 end
 
 % right side horizontal load, we set the load by segment 
-ktl=find(the_coor(:,1)==xmax);
+ktl=find(mesh.XY(:,1)==xmax);
 %[ dof_dim  node1 value1 node2 value2]
 for i=1:length(ktl)-1
     Boundary_loads=[ Boundary_loads; 1 ktl(i) 1 ktl(i+1) 1];
 end
 
 % no Initial stress field 
-mySig_o=-zeros(mesh_fem.Nelts,3); 
+mySig_o=-zeros(mesh.Nelts,3); 
 
 % create elasticity Block
-obj_elas=Elasticity_Block(Config,mesh_fem,propObject,Imp_displacement,...
- Boundary_loads,mySig_o);
 
-[K,dof_aux]=BuildStiffness(obj_elas); 
+proplist={L_elas};
 
-[F]=BuildBoundaryLoad(obj_elas); 
-
-Usol=full(Solve(obj_elas)); 
-
-[StressG,StrainG,AvgCoor]=Stress_And_Strain(obj_elas,Usol,'Gauss');
+[K,ID_array]=AssembleMatrix(mesh,'2D','Elasticity',proplist,3);
  
-[Stress,Strain,AvgCoor]=Stress_And_Strain(obj_elas,Usol);
+[Fload]=AssembleVectorBoundaryTerm(mesh,'2D','BoundaryLoads',Boundary_loads,ID_array,3);
 
- Stress
+Fbody=Fload*0.;
+% solution of the system
+
+[eq_free,fix_nonZero,eq_fix]=PrepareDirichletBC(Imp_displacement,ID_array);
+
+if (isempty(fix_nonZero))
+    Ur=K(eq_free,eq_free)\(Fbody(eq_free)+Fload(eq_free));
+else
+    eq_fix_nonZero=[];
+    for imp=1:length(fix_nonZero)
+        eq_fix_nonZero=[eq_fix_nonZero ; ID_array(Imp_displacement(fix_nonZero(imp),1),Imp_displacement(fix_nonZero(imp),2)) ];
+    end
+    %  disp(eq_fix_nonZero);
+    %  disp(size(obj.Imp_displacement(fix_nonZero,3)));
+    F_disp=-K(eq_free,eq_fix_nonZero)*obj.Imp_displacement(fix_nonZero,3);
+    Ur=K(eq_free,eq_free)\(Fbody(eq_free)+Fload(eq_free)+F_disp);
+end
+
+% glue back solution for all nodes
+Usol(eq_free)=Ur;
+if (isempty(eq_fix)==0)
+    Usol(eq_fix)=0.;
+end
+if (isempty(fix_nonZero)==0)
+    Usol(eq_fix_nonZero)=Imp_displacement(fix_nonZero,3);
+end
+
  
+[Stress,Strain,AvgCoor]=Compute_Stress_And_Strain(mesh,'2D',proplist,3,Usol,ID_array,mySig_o,'Gauss')
+
+[Stress,Strain,AvgCoor]=Compute_Stress_And_Strain(mesh,'2D',proplist,3,Usol,ID_array,mySig_o)
+
+Stress
+
+%
+
+
+udisp =reshape(Usol,[length(ID_array(:,1)) 2 ]);
+udisp(:,1)=Usol(ID_array(:,1));
+udisp(:,2)=Usol(ID_array(:,2));
+
+
+% plot deformed mesh
+figure(3)
+plotmesh(the_coor,connect,[.2 .2 .2],'w')
+hold on;
+plotmesh(the_coor+udisp*1e3,connect,[.8 .2 .2],'none')
+
 
