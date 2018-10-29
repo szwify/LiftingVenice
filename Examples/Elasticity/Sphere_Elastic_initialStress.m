@@ -18,7 +18,7 @@ end
 edge = [ edge ; nrad+1 1 ];
  
 %------------------------------------------- call mesh-gen.
-   [vert,etri, tria,tnum] = refine2(node,edge,[],[],0.1) ; % do not touch
+   [vert,etri, tria,tnum] = refine2(node,edge,[],[],0.04) ; % do not touch
   
   the_coor=vert; 
   connect=tria;

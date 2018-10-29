@@ -36,8 +36,6 @@ edge = [ edge ; nrad+1 1 ];
 %         'edgecolor',[.1,.1,.1], ...
 %         'linewidth',1.5) ;
 
-
-
 mesh = FEmesh(the_coor,connect);
 
 
@@ -104,8 +102,8 @@ mySig_o= zeros(mesh.Nelts,4);  % 4 components in 2D axi-symmetry (srr, szz, srz,
  proplist={L_elas};
  [K,ID_array]=AssembleMatrix(mesh,'Axis','Elasticity',proplist,3);
 
-[Fload]=AssembleVectorBoundaryTerm(mesh,'Axis','BoundaryLoads',Boundary_loads,ID_array,3);
-
+[Fload]=AssembleVectorBoundaryTerm(mesh,'Axis','BoundaryLoads',Boundary_loads,ID_array,2);
+%%
 Fbody=Fload*0.;
 % solution of the system
 

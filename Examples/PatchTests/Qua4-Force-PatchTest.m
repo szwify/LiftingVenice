@@ -138,7 +138,6 @@ Stress
 
 %
 
-
 udisp =reshape(Usol,[length(ID_array(:,1)) 2 ]);
 udisp(:,1)=Usol(ID_array(:,1));
 udisp(:,2)=Usol(ID_array(:,2));
