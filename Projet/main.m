@@ -1,45 +1,25 @@
-clear all
+L = 120;
+Htot = 60;
+H1 = 25;
+H2 = 40;
+H3 = 45;
+H4 = 60;
 
-% implementation of TRI3 element for axi-symmetry elasticity
-%    
-%     SPHERE
-% 
-% ---- there is still something weird ... check load integration in
-% axisymmetry
-%  - works ok with inital stress state. 
-%  we apply an unit external pressure here
-% it looks like there is a slight inbalance in the applied load (on z=0
-% axis)
+Hs = [0,5;
+    -H1,5;
+    -H2,0.5; 
+    -H3,0.5;
+    -H4,5;
+    ];
 
-Radius = 1.;
-nrad = 40;
-thetas=linspace(0.,pi/2.,nrad); 
-node = [ 0., 0. ;
-   Radius*cos(thetas)' , Radius*sin(thetas)' 
-];
-edge = [];
-for e=1:nrad
-edge = [ edge ; e e+1 ];
-end
-edge = [ edge ; nrad+1 1 ];
- 
-%------------------------------------------- call mesh-gen.
-[vert,etri, tria,tnum] = refine2(node,edge,[],[],0.04) ; % do not touch
-  
-  the_coor=vert; 
-  connect=tria;
- 
-  figure(1);
-  plotmesh(the_coor,connect,[.2 .2 .2],'w')
- 
-%    % boundary 
-%    patch('faces',edge(:,1:2),'vertices',node, ...
-%         'facecolor','w', ...
-%         'edgecolor',[.1,.1,.1], ...
-%         'linewidth',1.5) ;
+[vert,etri, tria,tnum] = stratimesher(120, Hs);
+the_coor=vert; 
+connect=tria;
+
+figure(1);
+plotmesh(the_coor,connect,[.2 .2 .2],'w')
 
 mesh = FEmesh(the_coor,connect);
-
 
 
 % MATERIAL PROPERTIES
@@ -59,17 +39,25 @@ L_elas=Elastic_Isotropic_Stiffness(k,g,'Axis');
 % impose z displacement bottom  (dof 2) 
 % impose r displacement left  (dof 1)
 
-klt_z = find(mesh.XY(:,2)==0.);
-Imp_displacement=[klt_z  2*ones(length(klt_z),1)  0.*ones(length(klt_z),1) ];
+klt_down = find(mesh.XY(:,2)==-H4);
+Imp_displacement=[klt_down  ones(length(klt_down),1)  ones(length(klt_down),1) ];
 
-klt_r = find(round(mesh.XY(:,1),4) ==0.);
+klt_left = find(mesh.XY(:,1)==0);
 Imp_displacement=[Imp_displacement;
-    klt_r  1*ones(length(klt_r),1)  0.*ones(length(klt_r),1) ];
+    klt_left  zeros(length(klt_left),1)  ones(length(klt_left),1) ];
+
+klt_right = find(mesh.XY(:,1)==L);
+Imp_displacement=[Imp_displacement;
+    klt_right  zeros(length(klt_right),1)  ones(length(klt_right),1) ];
+
  
 hold on;
-plot(mesh.XY(klt_z,1),mesh.XY(klt_z,2),'or')
+plot(mesh.XY(klt_down,1),mesh.XY(klt_down,2),'or')
 hold on;
-plot(mesh.XY(klt_r,1),mesh.XY(klt_r,2),'or')
+plot(mesh.XY(klt_left,1),mesh.XY(klt_left,2),'or')
+hold on;
+plot(mesh.XY(klt_right,1),mesh.XY(klt_right,2),'or')
+
 
 %%%% create boundary loads matrix ....format is dof node1 intensity1 node2
 %%%% intensity 2   (where node 1 node 2 define a segment)
@@ -141,7 +129,7 @@ AnalyticSolUr= @(r) (r*(1-2*nu)/(2.*g*(1.+nu)));
 % radial displacement at z=0 and at at r=0 -> should be the same....
 % 
 figure(2)
-plot(mesh.XY(klt_z,1), Usol(ID_array(klt_z,1)),'ok' )
+plot(mesh.XY(klt_y,1), Usol(ID_array(klt_y,1)),'ok' )
 hold on
 plot(mesh.XY(klt_r,2), Usol(ID_array(klt_r,2)),'*k' )
 hold on

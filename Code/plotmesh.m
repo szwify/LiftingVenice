@@ -6,7 +6,7 @@ function []=plotmesh(the_coor,connect,rgb,bck)
                         'edgecolor',rgb) ;
                         hold on; 
                         
-                        axis image off;
+                        axis image on;
                         
 end
                         
