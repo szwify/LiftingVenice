@@ -104,8 +104,10 @@ for seg=1:length(ktl_pressure)
     
     pressure = 1;
     
-    pressure_load =[pressure_load ;...
-                   ktl_pressure(seg) pressure]; 
+    Boundary_loads =[Boundary_loads ;...
+                   1 ktl_pressure(seg) pressure); ...
+                   2 ktl_pressure(seg) deltap*sin(theta_1) ktl_pressure(seg+1) deltap*sin(theta_2); 
+                  ]; 
 end
 
 %Boundary_loads =[];
