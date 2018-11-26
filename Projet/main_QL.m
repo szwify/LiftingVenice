@@ -1,23 +1,51 @@
-L = 120;
-Htot = 60;
-H1 = 25;
-H2 = 40;
-H3 = 45;
-H4 = 60;
+% Problem INPUT
+Htot = 30;
+L = 2*Htot;
+H1 = 15;
+H2 = 20;
+H3 = 22;
+H4 = Htot;
 
-Hs = [0,5;
-    -H1,5;
-    -H2,0.5; 
-    -H3,0.5;
-    -H4,5;
+% Mesh PARAMETERS
+Hs = [0,2;
+    -H1,0.5;
+    -H2,0.1; 
+    -H3,0.1;
+    -H4,0.5;
     ];
-
-[vert,etri, tria,tnum] = stratimesher(120, Hs);
+% Mesh GENERATION
+[vert,etri, tria,tnum] = stratimesher(L, Hs);
 the_coor=vert; 
 connect=tria;
 
-figure(1);
-plotmesh(the_coor,connect,[.2 .2 .2],'w')
+% Mesh PLOT
+    figure(1);
+    patch('faces',tria(tnum==1,1:3),'vertices',vert, ...
+        'facecolor',[0.9,0.9,0.9], ...
+        'edgecolor',[.2,.2,.2]) ;
+    hold on; %axis image off;
+    patch('faces',tria(tnum==2,1:3),'vertices',vert, ...
+        'facecolor',[0.7,0.7,0.7], ...
+        'edgecolor',[.2,.2,.2]) ;
+    patch('faces',tria(tnum==3,1:3),'vertices',vert, ...
+        'facecolor',[0.4,0.4,0.4], ...
+        'edgecolor',[.2,.2,.2]) ;
+    patch('faces',tria(tnum==4,1:3),'vertices',vert, ...
+        'facecolor',[0.7,0.7,0.7], ...
+        'edgecolor',[.2,.2,.2]) ;    
+%     patch('faces',tria(tnum==5,1:3),'vertices',vert, ...
+%         'facecolor',[.5,.5,.5], ...
+%         'edgecolor',[.2,.2,.2]) ;    
+%     patch('faces',edg(:,1:2),'vertices',node, ...
+%         'facecolor','w', ...
+%         'edgecolor',[.1,.1,.1], ...
+%         'linewidth',1.5) ;
+    title('Lifting Venice - MESH') ;
+%     axis ij;
+    ylabel('Depth [m]');
+    xlabel('Length [m]');
+    legend({'Layer XYZ','Clay','Injection','Clay'},'Location','best')
+
 
 mesh = FEmesh(the_coor,connect);
 
@@ -52,11 +80,11 @@ Imp_displacement=[Imp_displacement;
 
  
 hold on;
-plot(mesh.XY(klt_down,1),mesh.XY(klt_down,2),'or')
+plot(mesh.XY(klt_down,1),mesh.XY(klt_down,2),'+r','HandleVisibility','off')
 hold on;
-plot(mesh.XY(klt_left,1),mesh.XY(klt_left,2),'or')
+plot(mesh.XY(klt_left,1),mesh.XY(klt_left,2),'og','HandleVisibility','off')
 hold on;
-plot(mesh.XY(klt_right,1),mesh.XY(klt_right,2),'or')
+plot(mesh.XY(klt_right,1),mesh.XY(klt_right,2),'og','HandleVisibility','off')
 
 
 
