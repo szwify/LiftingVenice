@@ -1,4 +1,8 @@
 %% Problem INPUT
+
+clear all
+clc
+
 Htot = 30;
 L = 2*Htot;
 H1 = 15;
@@ -7,11 +11,11 @@ H3 = 22;
 H4 = Htot;
 
 % Mesh PARAMETERS
-Hs = [0,2;
-    -H1,1;
+Hs = [0,10;
+    -H1,5;
     -H2,0.5; 
     -H3,0.5;
-    -H4,1;
+    -H4,5;
     ];
 % Mesh GENERATION
 [vert,etri, tria,tnum] = stratimesher(L, Hs);
@@ -82,15 +86,15 @@ L_d=Elastic_Isotropic_Stiffness(k,g,'Axis');
 
 %% Boundary Condition
 klt_down = find(mesh.XY(:,2)==-H4);
-Imp_displacement=[klt_down  ones(length(klt_down),1)  zeros(length(klt_down),1) ];
+Imp_displacement=[klt_down  2*ones(length(klt_down),1)  zeros(length(klt_down),1) ];
 
 klt_left = find(mesh.XY(:,1)==0);
 Imp_displacement=[Imp_displacement;
-    klt_left  zeros(length(klt_left),1)  ones(length(klt_left),1) ];
+    klt_left  ones(length(klt_left),1)  zeros(length(klt_left),1) ];
 
 klt_right = find(mesh.XY(:,1)==L);
 Imp_displacement=[Imp_displacement;
-    klt_right  zeros(length(klt_right),1)  ones(length(klt_right),1) ];
+    klt_right  ones(length(klt_right),1)  zeros(length(klt_right),1) ];
 
  
 hold on;
@@ -119,8 +123,7 @@ for seg=1:length(ktl_flux)-1
     flux = 1;
     
     flux_load =[flux_load ;...
-                   1 ktl_flux(seg) flux ktl_flux(seg+1) flux;
-                   2 ktl_flux(seg) 0 ktl_flux(seg+1) 0]; 
+                  ktl_flux(seg) flux]; 
 end
 
 %Boundary_loads =[];
@@ -137,7 +140,7 @@ mySig_o= zeros(mesh.Nelts,4);  % 4 components in 2D axi-symmetry (srr, szz, srz,
 proplist={L_d};
 [K,ID_array]=AssembleMatrix(mesh,'Axis','Elasticity',proplist,3);
 
-[Fflux]=AssembleVectorBoundaryTerm(mesh,'Axis','BoundaryLoads',flux_load,ID_array,2);
+[Fflux]=AssembleVectorBoundaryTerm(mesh,'Axis','BoundaryLoads',flux_load,ID_array,3);
 [Fbody]=AssembleVectorVolumeTerm(mesh,'Axis','InitialStress',mySig_o,ID_array,3);
 
 Fload=Fbody*0;
@@ -147,9 +150,10 @@ Fload=Fbody*0;
 % mass matrix term
 proplist={1./M};
 [S,Id_p]=AssembleMatrix(mesh,'Axis','Mass',proplist,3);
-% pore-pressure fixed to zero on the outer radius.
-eq_fix_p=[Id_p(ktl_rad)  ];
-eq_free_p=setdiff(Id_p(:),eq_fix_p(:));
+%% pore-pressure fixed to zero on the outer radius.
+eq_free_p=[Id_p(ktl_flux)  ];
+eq_fix_p=setdiff(Id_p(:),eq_free_p(:));
+
 
 % laplacian term
 proplist={kappa};
@@ -158,7 +162,7 @@ proplist={kappa};
 % Coupling term 
 proplist={b};
 [C,Id_u,Id_p]=AssembleCouplingMatrix(mesh,mesh,'Axis',proplist,3);
-
+%%
 ntot_u=length(Id_u(:));
 ntot_p=length(Id_p(:));
 %%%%%%%%%%%%%%%%%%%%%%%%%  
@@ -180,6 +184,7 @@ TotMat(1:ntot_u,ntot_u+1:ntot)=-C;
 %
 Ftot=sparse(ntot,1);
 Ftot(1:ntot_u)=Fbody;
+Ftot(ktl_flux+ntot_u)=-flux;
 
 eq_free=[eq_free_u;ntot_u   + Id_p(:)];%+eq_free_p];
 Undrained_sol=sparse(ntot,1);
@@ -189,25 +194,24 @@ pp_o=Undrained_sol(ntot_u   + Id_p(:));
 U_o=sparse(ntot_u,1);
 U_o(eq_free_u) = Undrained_sol(eq_free_u);
 %  
-AnalyticSolUr= @(r) -(r*(1-2* nu_u)/(2.* g*(1.+ nu_u)));
 
-% radial displacement at z=0 and at at r=0 -> should be the same....
-%
-figure(2)
-plot(mesh.XY(klt_z,1), U_o(ID_array(klt_z,1)),'ok' )
-hold on
-plot(mesh.XY(klt_r,2), U_o(ID_array(klt_r,2)),'*k' )
-hold on
-plot(mesh.XY(klt_r,2),AnalyticSolUr(mesh.XY(klt_r,2)),'-r');
-
+% % radial displacement at z=0 and at at r=0 -> should be the same....
+% %
+% figure(2)
+% plot(mesh.XY(klt_z,1), U_o(ID_array(klt_z,1)),'ok' )
+% hold on
+% plot(mesh.XY(klt_r,2), U_o(ID_array(klt_r,2)),'*k' )
+% hold on
+% plot(mesh.XY(klt_r,2),AnalyticSolUr(mesh.XY(klt_r,2)),'-r');
+% 
 % reshape Usol_u
 udisp = [U_o(ID_array(:,1)) U_o(ID_array(:,2))];
 
 % plot deformed mesh
 figure(3)
-plotmesh(mesh.XY,connect,[.2 .2 .2],'w')
+plotmesh(mesh.XY,connect,[.0 .0 .0],'w')
 hold on;
-plotmesh(mesh.XY+udisp*1e3,connect,[.8 .2 .2],'none')
+plotmesh(mesh.XY+udisp,connect,[.0 1 .0],'none')
 
 % t=0+ solution is the undrained response
 %pp_o=ones(mesh_fem.FEnode.n_tot,1)*Pp_u_u;
