@@ -1,4 +1,4 @@
-% Problem INPUT
+%% Problem INPUT
 Htot = 30;
 L = 2*Htot;
 H1 = 15;
@@ -50,23 +50,37 @@ connect=tria;
 mesh = FEmesh(the_coor,connect);
 
 
+%% 2D axisymmetry
+Config='Axis';
+%
 % MATERIAL PROPERTIES
-% all stiffness in MPa, 
+% all stiffness in MPa, ohio Sandstone
 
-k=4.2e3;
-g=3.1e3; 
+k=8.4e3; % elastic drained bulk modulus
+g=6.8e3;  % shear modulus
+b=0.707692; % Biot coefficient 
+%phi=0.19;  % porosity 
+%k_f=2.2e3;  % fluid bulk modulus
+M=9.18478e3; % Biot Modulus
+%overN=1./M-phi/k_f;N=1/overN  % Biot intrinsic Modulus (fluid independent)
+k_u=k+b^2*M     % undrained bulk modulus
+perm =0.137549e-3; % permeability value adjusted such that c= k /(mu S)=1 , where S is storage coefficient
 
-L_elas=Elastic_Isotropic_Stiffness(k,g,'Axis');
+mu_f=1; rho=1;
+kappa = perm / mu_f  ; 
 
-% Elasticity problem  1D plane-strain axisymmetry 
-% ProblemType='Elasticity';
-% Config='Axis';
+[E_u,nu_u]=Enu_from_kg(k_u,g);
 
-% dof_h=DOF_handle(mesh_fem,2,'Matrix');  % the dof_handle
+[E,nu]=Enu_from_kg(k,g);
 
-% impose z displacement bottom  (dof 2) 
-% impose r displacement left  (dof 1)
+% undrained elastic stiffness tensor
+L_u=Elastic_Isotropic_Stiffness(k_u,g,'Axis');
 
+% drained elastic stiffness tensor
+L_d=Elastic_Isotropic_Stiffness(k,g,'Axis');
+
+
+%% Boundary Condition
 klt_down = find(mesh.XY(:,2)==-H4);
 Imp_displacement=[klt_down  ones(length(klt_down),1)  zeros(length(klt_down),1) ];
 
@@ -94,18 +108,19 @@ plot(mesh.XY(klt_right,1),mesh.XY(klt_right,2),'og','HandleVisibility','off')
 %%%% intensity 2   (where node 1 node 2 define a segment)
 %%%% 
 deltap=1;
-ktl_pressure=find(mesh.XY(:,1)==0 & mesh.XY(:,2)<-H2 & mesh.XY(:,2)>-H3);
-pressure_load =[];
+ktl_flux=find(mesh.XY(:,1)==0 & mesh.XY(:,2)<-H2 & mesh.XY(:,2)>-H3);
+flux_load =[];
 hold on;
-plot(mesh.XY(ktl_pressure,1),mesh.XY(ktl_pressure,2),'dr')
+plot(mesh.XY(ktl_flux,1),mesh.XY(ktl_flux,2),'dr')
 hold on;
 %    switch from fr,0=  to----- fx fy    - to be recheck
-for seg=1:length(ktl_pressure)
+for seg=1:length(ktl_flux)-1
     
-    pressure = 1;
+    flux = 1;
     
-    pressure_load =[pressure_load ;...
-                   ktl_pressure(seg) pressure]; 
+    flux_load =[flux_load ;...
+                   1 ktl_flux(seg) flux ktl_flux(seg+1) flux;
+                   2 ktl_flux(seg) 0 ktl_flux(seg+1) 0]; 
 end
 
 %Boundary_loads =[];
@@ -116,71 +131,172 @@ mySig_o= zeros(mesh.Nelts,4);  % 4 components in 2D axi-symmetry (srr, szz, srz,
 % mySig_o(:,2)=1;
 % mySig_o(:,4)=1;
 
- %% assemble stiffness
- proplist={L_elas};
- [K,ID_array]=AssembleMatrix(mesh,'Axis','Elasticity',proplist,3);
+%% different matrices
 
-[Fload]=AssembleVectorBoundaryTerm(mesh,'Axis','BoundaryLoads',pressure_load,ID_array,2);
-%%
-Fbody=Fload*0.;
-% solution of the system
+% elasticity
+proplist={L_d};
+[K,ID_array]=AssembleMatrix(mesh,'Axis','Elasticity',proplist,3);
 
-[eq_free,fix_nonZero,eq_fix]=PrepareDirichletBC(Imp_displacement,ID_array);
+%[Fload]=AssembleVectorBoundaryTerm(mesh,'Axis','BoundaryLoads',Boundary_loads,ID_array,3);
+[Fbody]=AssembleVectorVolumeTerm(mesh,'Axis','InitialStress',mySig_o,ID_array,3);
 
-if (isempty(fix_nonZero))
-    Ur=K(eq_free,eq_free)\(Fbody(eq_free)+Fload(eq_free));
-else
-    eq_fix_nonZero=[];
-    for imp=1:length(fix_nonZero)
-        eq_fix_nonZero=[eq_fix_nonZero ; ID_array(Imp_displacement(fix_nonZero(imp),1),Imp_displacement(fix_nonZero(imp),2)) ];
-    end
-    %  disp(eq_fix_nonZero);
-    %  disp(size(obj.Imp_displacement(fix_nonZero,3)));
-    F_disp=-K(eq_free,eq_fix_nonZero)*obj.Imp_displacement(fix_nonZero,3);
-    Ur=K(eq_free,eq_free)\(Fbody(eq_free)+Fload(eq_free)+F_disp);
-end
+Fload=Fbody*0;
 
-% glue back solution for all nodes
-Usol(eq_free)=Ur;
-if (isempty(eq_fix)==0)
-    Usol(eq_fix)=0.;
-end
-if (isempty(fix_nonZero)==0)
-    Usol(eq_fix_nonZero)=Imp_displacement(fix_nonZero,3);
-end
+[eq_free_u,fix_nonZero_u,eq_fix_u]=PrepareDirichletBC(Imp_displacement,ID_array);
 
+% mass matrix term
+proplist={1./M};
+[S,Id_p]=AssembleMatrix(mesh,'Axis','Mass',proplist,3);
+% pore-pressure fixed to zero on the outer radius.
+eq_fix_p=[Id_p(ktl_rad)  ];
+eq_free_p=setdiff(Id_p(:),eq_fix_p(:));
 
-nu =  (1-2*g/(3*k))/(2+2*g/(3*k));
+% laplacian term
+proplist={kappa};
+[D,Id_p]=AssembleMatrix(mesh,'Axis','Laplacian',proplist,3);
+
+% Coupling term 
+proplist={b};
+[C,Id_u,Id_p]=AssembleCouplingMatrix(mesh,mesh,'Axis',proplist,3);
+
+ntot_u=length(Id_u(:));
+ntot_p=length(Id_p(:));
+%%%%%%%%%%%%%%%%%%%%%%%%%  
+%%%%%%%%%%%%%%%%%%%%%%%%%
+% implicit time - integration
+
+%% Solving directly for the undrained solution at t=0 ! 
+%  We dont fix the pore pressure to zero on the outer radius for the undrained response.
+dt= 0.;
+AA=S+dt*D;
+
+ntot=ntot_u+ntot_p;
+
+TotMat=sparse(ntot,ntot);
+TotMat(1:ntot_u,1:ntot_u)=K;
+TotMat(ntot_u+1:ntot,ntot_u+1:ntot)=-AA;
+TotMat(ntot_u+1:ntot,1:ntot_u)=-C';
+TotMat(1:ntot_u,ntot_u+1:ntot)=-C;
 %
-AnalyticSolUr= @(r) (r*(1-2*nu)/(2.*g*(1.+nu)));
+Ftot=sparse(ntot,1);
+Ftot(1:ntot_u)=Fbody;
+
+eq_free=[eq_free_u;ntot_u   + Id_p(:)];%+eq_free_p];
+Undrained_sol=sparse(ntot,1);
+Undrained_sol(eq_free) = TotMat(eq_free,eq_free)\Ftot(eq_free);
+
+pp_o=Undrained_sol(ntot_u   + Id_p(:));
+U_o=sparse(ntot_u,1);
+U_o(eq_free_u) = Undrained_sol(eq_free_u);
+%  
+AnalyticSolUr= @(r) -(r*(1-2* nu_u)/(2.* g*(1.+ nu_u)));
 
 % radial displacement at z=0 and at at r=0 -> should be the same....
-% 
+%
 figure(2)
-plot(mesh.XY(klt_y,1), Usol(ID_array(klt_y,1)),'ok' )
+plot(mesh.XY(klt_z,1), U_o(ID_array(klt_z,1)),'ok' )
 hold on
-plot(mesh.XY(klt_r,2), Usol(ID_array(klt_r,2)),'*k' )
+plot(mesh.XY(klt_r,2), U_o(ID_array(klt_r,2)),'*k' )
 hold on
 plot(mesh.XY(klt_r,2),AnalyticSolUr(mesh.XY(klt_r,2)),'-r');
 
-%% Reshape UsolF
-udisp =reshape(Usol,[length(ID_array(:,1)) 2 ]);
-udisp(:,1)=Usol(ID_array(:,1));
-udisp(:,2)=Usol(ID_array(:,2));
-
+% reshape Usol_u
+udisp = [U_o(ID_array(:,1)) U_o(ID_array(:,2))];
 
 % plot deformed mesh
 figure(3)
-plotmesh(the_coor,connect,[.2 .2 .2],'w')
+plotmesh(mesh.XY,connect,[.2 .2 .2],'w')
 hold on;
-plotmesh(the_coor+udisp*1e3,connect,[.8 .2 .2],'none')
+plotmesh(mesh.XY+udisp*1e3,connect,[.8 .2 .2],'none')
 
-%% Stress
-[StressG,StrainG,AvgCoor]=Compute_Stress_And_Strain(mesh,'Axis',proplist,3,Usol,ID_array,mySig_o)
+% t=0+ solution is the undrained response
+%pp_o=ones(mesh_fem.FEnode.n_tot,1)*Pp_u_u;
+pp_o(eq_fix_p)=0.   ; % NOW we fix the pore pressure to zero. 
+
+figure(4) 
+trisurf(mesh.conn,mesh.XY(:,1),mesh.XY(:,2),full(pp_o))
  
-%[Stress,Strain,AvgCoor]=Stress_And_Strain(obj_elas,Usol);
+%%
 
-% stress should be uniform & equal to applied pressure (srr,szz,stt) and
-% srz=0
+%%%%%%
+dt=0.002;
+%----- matrix for fluid flow for ct time step
+AA=S+dt*D;
 
+ntot=ntot_u+ntot_p;
+
+TotMat=sparse(ntot,ntot);
+TotMat(1:ntot_u,1:ntot_u)=K;
+TotMat(ntot_u+1:ntot,ntot_u+1:ntot)=-AA;
+TotMat(ntot_u+1:ntot,1:ntot_u)=-C';
+TotMat(1:ntot_u,ntot_u+1:ntot)=-C;
+
+
+eq_free=[eq_free_u;ntot_u+eq_free_p];
+
+% time
+t_k(1)=0.;
+% history of pp at the sphere center
+hist_pp_1(1)=pp_o(1);
+
+% Algorithm ct
+n_step=501;
+
+% time loop -- 
+for i=2:n_step;
+    
+    t_k(i)=t_k(i-1)+dt;
+    
+    Dp=0.*pp_o;   % at nodes for fluid flow
+    D_U=0.*U_o;
+     
+    D_x=[D_U; Dp];
+    
+    po_lhs=dt*D(eq_free_p,:)*pp_o(:);
+    
+    P_s=sparse(ntot,1);
+    
+    P_s(eq_free_p+(ntot_u))=po_lhs;
+     
+    D_x(eq_free)=TotMat(eq_free,eq_free)\P_s(eq_free);
+    
+    Dp(eq_free_p)=D_x(eq_free_p+(ntot_u));
+    D_U(eq_free_u)=D_x(eq_free_u);
+    
+    pp_o=pp_o+Dp  ;
+    U_o=U_o+D_U;
+    
+    hist_pp_1(i)=pp_o(1);
+    
+ %   hist_ur_10(i)=U_o(10);
+    
+end
+
+%%
+ %trisurf(Ien,mesh_fem.FEnode.coor(:,1),mesh_fem.FEnode.coor(:,2), pp_o)
+ResA = csvread("PP-Sphere-ohio.csv"); % load the analytical solution vector t,ppat center (dt 0.002 time from 0 to 1
+
+figure(5)
+title(' Pore pressure evolution at the sphere center'); hold on;
+ plot(t_k,hist_pp_1,'k') ; hold on;
+plot(ResA(:,1),ResA(:,2),'r') 
+xlabel('time');
+ylabel(' pore pressure / applied load');
+
+figure(6)
+rel_error = abs(ResA(1:n_step,2)-hist_pp_1')./ResA(1:n_step,2)
+plot(t_k,rel_error);
+xlabel('time');
+ylabel(' relative error on pressure '); 
+
+figure(7) 
+ % reshape Usol_u
+udisp = [U_o(ID_array(:,1)) U_o(ID_array(:,2))];
+
+plotmesh(mesh.XY,connect,[.2 .2 .2],'w')
+hold on;
+plotmesh(mesh.XY+udisp*1e3,connect,[.8 .2 .2],'none')
+
+figure(8) 
+trisurf(mesh.conn,mesh.XY(:,1),mesh.XY(:,2),full(pp_o))
  

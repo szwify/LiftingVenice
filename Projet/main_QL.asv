@@ -1,4 +1,4 @@
-% Problem INPUT
+%% Problem INPUT
 Htot = 30;
 L = 2*Htot;
 H1 = 15;
@@ -50,23 +50,37 @@ connect=tria;
 mesh = FEmesh(the_coor,connect);
 
 
+%% 2D axisymmetry
+Config='Axis';
+%
 % MATERIAL PROPERTIES
-% all stiffness in MPa, 
+% all stiffness in MPa, ohio Sandstone
 
-k=4.2e3;
-g=3.1e3; 
+k=8.4e3; % elastic drained bulk modulus
+g=6.8e3;  % shear modulus
+b=0.707692; % Biot coefficient 
+%phi=0.19;  % porosity 
+%k_f=2.2e3;  % fluid bulk modulus
+M=9.18478e3; % Biot Modulus
+%overN=1./M-phi/k_f;N=1/overN  % Biot intrinsic Modulus (fluid independent)
+k_u=k+b^2*M     % undrained bulk modulus
+perm =0.137549e-3; % permeability value adjusted such that c= k /(mu S)=1 , where S is storage coefficient
 
-L_elas=Elastic_Isotropic_Stiffness(k,g,'Axis');
+mu_f=1; rho=1;
+kappa = perm / mu_f  ; 
 
-% Elasticity problem  1D plane-strain axisymmetry 
-% ProblemType='Elasticity';
-% Config='Axis';
+[E_u,nu_u]=Enu_from_kg(k_u,g);
 
-% dof_h=DOF_handle(mesh_fem,2,'Matrix');  % the dof_handle
+[E,nu]=Enu_from_kg(k,g);
 
-% impose z displacement bottom  (dof 2) 
-% impose r displacement left  (dof 1)
+% undrained elastic stiffness tensor
+L_u=Elastic_Isotropic_Stiffness(k_u,g,'Axis');
 
+% drained elastic stiffness tensor
+L_d=Elastic_Isotropic_Stiffness(k,g,'Axis');
+
+
+%% Boundary Condition
 klt_down = find(mesh.XY(:,2)==-H4);
 Imp_displacement=[klt_down  ones(length(klt_down),1)  zeros(length(klt_down),1) ];
 
@@ -95,7 +109,7 @@ plot(mesh.XY(klt_right,1),mesh.XY(klt_right,2),'og','HandleVisibility','off')
 %%%% 
 deltap=1;
 ktl_pressure=find(mesh.XY(:,1)==0 & mesh.XY(:,2)<-H2 & mesh.XY(:,2)>-H3);
-pressure_load =[];
+flux_load =[];
 hold on;
 plot(mesh.XY(ktl_pressure,1),mesh.XY(ktl_pressure,2),'dr')
 hold on;
@@ -104,10 +118,9 @@ for seg=1:length(ktl_pressure)
     
     pressure = 1;
     
-    Boundary_loads =[Boundary_loads ;...
-                   1 ktl_pressure(seg) pressure); ...
-                   2 ktl_pressure(seg) deltap*sin(theta_1) ktl_pressure(seg+1) deltap*sin(theta_2); 
-                  ]; 
+    flux_load =[flux_load ;...
+                   1 ktl_pressure(seg) pressure;
+                   2 ktl_pressure(seg) 0]; 
 end
 
 %Boundary_loads =[];
@@ -122,15 +135,15 @@ mySig_o= zeros(mesh.Nelts,4);  % 4 components in 2D axi-symmetry (srr, szz, srz,
  proplist={L_elas};
  [K,ID_array]=AssembleMatrix(mesh,'Axis','Elasticity',proplist,3);
 
-[Fload]=AssembleVectorBoundaryTerm(mesh,'Axis','BoundaryLoads',pressure_load,ID_array,2);
+[Flux]=AssembleVectorBoundaryTerm(mesh,'Axis','BoundaryLoads',flux_load,ID_array,2);
 %%
-Fbody=Fload*0.;
+Fbody=Flux*0.;
 % solution of the system
 
 [eq_free,fix_nonZero,eq_fix]=PrepareDirichletBC(Imp_displacement,ID_array);
 
 if (isempty(fix_nonZero))
-    Ur=K(eq_free,eq_free)\(Fbody(eq_free)+Fload(eq_free));
+    Ur=K(eq_free,eq_free)\(Fbody(eq_free)+Flux(eq_free));
 else
     eq_fix_nonZero=[];
     for imp=1:length(fix_nonZero)
@@ -139,7 +152,7 @@ else
     %  disp(eq_fix_nonZero);
     %  disp(size(obj.Imp_displacement(fix_nonZero,3)));
     F_disp=-K(eq_free,eq_fix_nonZero)*obj.Imp_displacement(fix_nonZero,3);
-    Ur=K(eq_free,eq_free)\(Fbody(eq_free)+Fload(eq_free)+F_disp);
+    Ur=K(eq_free,eq_free)\(Fbody(eq_free)+Flux(eq_free)+F_disp);
 end
 
 % glue back solution for all nodes
