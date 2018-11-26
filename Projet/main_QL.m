@@ -137,7 +137,7 @@ mySig_o= zeros(mesh.Nelts,4);  % 4 components in 2D axi-symmetry (srr, szz, srz,
 proplist={L_d};
 [K,ID_array]=AssembleMatrix(mesh,'Axis','Elasticity',proplist,3);
 
-%[Fload]=AssembleVectorBoundaryTerm(mesh,'Axis','BoundaryLoads',Boundary_loads,ID_array,3);
+[Fflux]=AssembleVectorBoundaryTerm(mesh,'Axis','BoundaryLoads',flux_load,ID_array,2);
 [Fbody]=AssembleVectorVolumeTerm(mesh,'Axis','InitialStress',mySig_o,ID_array,3);
 
 Fload=Fbody*0;
