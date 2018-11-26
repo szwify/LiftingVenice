@@ -22,17 +22,17 @@ connect=tria;
     figure(1);
     patch('faces',tria(tnum==1,1:3),'vertices',vert, ...
         'facecolor',[0.9,0.9,0.9], ...
-        'edgecolor',[.2,.2,.2]) ;
+        'edgecolor',[.2,.2,.2],'DisplayName','Layer 1') ;
     hold on; %axis image off;
     patch('faces',tria(tnum==2,1:3),'vertices',vert, ...
         'facecolor',[0.7,0.7,0.7], ...
-        'edgecolor',[.2,.2,.2]) ;
+        'edgecolor',[.2,.2,.2],'DisplayName','Clay') ;
     patch('faces',tria(tnum==3,1:3),'vertices',vert, ...
         'facecolor',[0.4,0.4,0.4], ...
-        'edgecolor',[.2,.2,.2]) ;
+        'edgecolor',[.2,.2,.2],'DisplayName','Injection') ;
     patch('faces',tria(tnum==4,1:3),'vertices',vert, ...
         'facecolor',[0.7,0.7,0.7], ...
-        'edgecolor',[.2,.2,.2]) ;    
+        'edgecolor',[.2,.2,.2],'DisplayName','Clay') ;    
 %     patch('faces',tria(tnum==5,1:3),'vertices',vert, ...
 %         'facecolor',[.5,.5,.5], ...
 %         'edgecolor',[.2,.2,.2]) ;    
@@ -44,7 +44,7 @@ connect=tria;
 %     axis ij;
     ylabel('Depth [m]');
     xlabel('Length [m]');
-    legend({'Layer XYZ','Clay','Injection','Clay'},'Location','best')
+    legend('Location','best')
 
 
 mesh = FEmesh(the_coor,connect);
@@ -111,7 +111,7 @@ deltap=1;
 ktl_flux=find(mesh.XY(:,1)==0 & mesh.XY(:,2)<-H2 & mesh.XY(:,2)>-H3);
 flux_load =[];
 hold on;
-plot(mesh.XY(ktl_flux,1),mesh.XY(ktl_flux,2),'dr')
+plot(mesh.XY(ktl_flux,1),mesh.XY(ktl_flux,2),'dr','DisplayName','Injections')
 hold on;
 %    switch from fr,0=  to----- fx fy    - to be recheck
 for seg=1:length(ktl_flux)-1
