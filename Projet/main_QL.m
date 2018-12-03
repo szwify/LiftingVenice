@@ -51,7 +51,7 @@ connect=tria;
     legend('Location','best')
 
 
-mesh = FEmesh(the_coor,connect);
+mesh = FEmesh(the_coor,connect, tnum);
 
 
 %% 2D axisymmetry
@@ -137,7 +137,7 @@ mySig_o= zeros(mesh.Nelts,4);  % 4 components in 2D axi-symmetry (srr, szz, srz,
 %% different matrices
 
 % elasticity
-proplist={L_d};
+proplist={L_d,L_d,L_d,L_d};
 [K,ID_array]=AssembleMatrix(mesh,'Axis','Elasticity',proplist,3);
 
 %[Fflux]=AssembleVectorBoundaryTerm(mesh,'Axis','BoundaryLoads',flux_load,ID_array,3);
