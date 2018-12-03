@@ -11,11 +11,11 @@ H3 = 22;
 H4 = Htot;
 
 % Mesh PARAMETERS
-Hs = [0,10;
-    -H1,5;
+Hs = [0,20;
+    -H1,10;
     -H2,0.5; 
     -H3,0.5;
-    -H4,5;
+    -H4,10;
     ];
 % Mesh GENERATION
 [vert,etri, tria,tnum] = stratimesher(L, Hs);
@@ -121,9 +121,9 @@ hold on;
 for seg=1:length(ktl_flux)-1
     
     flux = 1;
-    
+    % [dof node1 intensity1 node2   intensity2 ] 
     flux_load =[flux_load ;...
-                  ktl_flux(seg) flux]; 
+                1  ktl_flux(seg) flux ktl_flux(seg+1) flux]; 
 end
 
 %Boundary_loads =[];
@@ -195,15 +195,6 @@ U_o=sparse(ntot_u,1);
 U_o(eq_free_u) = Undrained_sol(eq_free_u);
 %  
 
-% % radial displacement at z=0 and at at r=0 -> should be the same....
-% %
-% figure(2)
-% plot(mesh.XY(klt_z,1), U_o(ID_array(klt_z,1)),'ok' )
-% hold on
-% plot(mesh.XY(klt_r,2), U_o(ID_array(klt_r,2)),'*k' )
-% hold on
-% plot(mesh.XY(klt_r,2),AnalyticSolUr(mesh.XY(klt_r,2)),'-r');
-% 
 % reshape Usol_u
 udisp = [U_o(ID_array(:,1)) U_o(ID_array(:,2))];
 
@@ -211,7 +202,7 @@ udisp = [U_o(ID_array(:,1)) U_o(ID_array(:,2))];
 figure(3)
 plotmesh(mesh.XY,connect,[.0 .0 .0],'w')
 hold on;
-plotmesh(mesh.XY+udisp,connect,[.0 1 .0],'none')
+plotmesh(mesh.XY+3*udisp,connect,[.0 1 .0],'none')
 
 % t=0+ solution is the undrained response
 %pp_o=ones(mesh_fem.FEnode.n_tot,1)*Pp_u_u;
@@ -247,7 +238,7 @@ hist_pp_1(1)=pp_o(1);
 n_step=501;
 
 % time loop -- 
-for i=2:n_step;
+for i=2:n_step
     
     t_k(i)=t_k(i-1)+dt;
     
@@ -277,21 +268,6 @@ for i=2:n_step;
 end
 
 %%
- %trisurf(Ien,mesh_fem.FEnode.coor(:,1),mesh_fem.FEnode.coor(:,2), pp_o)
-ResA = csvread("PP-Sphere-ohio.csv"); % load the analytical solution vector t,ppat center (dt 0.002 time from 0 to 1
-
-figure(5)
-title(' Pore pressure evolution at the sphere center'); hold on;
- plot(t_k,hist_pp_1,'k') ; hold on;
-plot(ResA(:,1),ResA(:,2),'r') 
-xlabel('time');
-ylabel(' pore pressure / applied load');
-
-figure(6)
-rel_error = abs(ResA(1:n_step,2)-hist_pp_1')./ResA(1:n_step,2)
-plot(t_k,rel_error);
-xlabel('time');
-ylabel(' relative error on pressure '); 
 
 figure(7) 
  % reshape Usol_u
@@ -299,7 +275,7 @@ udisp = [U_o(ID_array(:,1)) U_o(ID_array(:,2))];
 
 plotmesh(mesh.XY,connect,[.2 .2 .2],'w')
 hold on;
-plotmesh(mesh.XY+udisp*1e3,connect,[.8 .2 .2],'none')
+plotmesh(mesh.XY+udisp*3,connect,[.8 .2 .2],'none')
 
 figure(8) 
 trisurf(mesh.conn,mesh.XY(:,1),mesh.XY(:,2),full(pp_o))
