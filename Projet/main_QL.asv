@@ -172,8 +172,7 @@ Fload=Fbody*0;
 
 [S,Id_p]=AssembleMatrix(mesh,'Axis','Mass',proplist_mass,3);
 %% pore-pressure fixed to zero on the outer radius.
-%eq_free_p=[Id_p(ktl_flux)  ];
-eq_free_p = [Id_p(:)];
+eq_free_p=[Id_p(ktl_flux)  ];
 eq_fix_p=setdiff(Id_p(:),eq_free_p(:));
 
 
