@@ -6,18 +6,18 @@ clc
 Qtot = 0.035; % m3/s
 timestep = 60*60*24;
 n_iter = 1500;
-Htot = 1100;
+Htot = 1500;
 L = 2*Htot;
 H1 = 550;
 H2 = 650;
 H3 = 800;
-H4 = 1000;
+H4 = 1500;
 
 % Mesh PARAMETERS
 Hs = [0,100;
     -H1,100;
-    -H2,50; 
-    -H3,50;
+    -H2,100; 
+    -H3,100;
     -H4,100];
 % Mesh GENERATION
 [vert,etri, tria,tnum] = stratimesher(L, Hs);
@@ -172,7 +172,8 @@ Fload=Fbody*0;
 
 [S,Id_p]=AssembleMatrix(mesh,'Axis','Mass',proplist_mass,3);
 %% pore-pressure fixed to zero on the outer radius.
-eq_free_p=[Id_p(ktl_flux)  ];
+%eq_free_p=[Id_p(ktl_flux)  ];
+eq_free_p = [Id_p(:)];
 eq_fix_p=setdiff(Id_p(:),eq_free_p(:));
 
 
@@ -197,40 +198,16 @@ AA=S+dt*D;
 
 ntot=ntot_u+ntot_p;
 
-TotMat=sparse(ntot,ntot);
-TotMat(1:ntot_u,1:ntot_u)=K;
-TotMat(ntot_u+1:ntot,ntot_u+1:ntot)=-AA;
-TotMat(ntot_u+1:ntot,1:ntot_u)=-C';
-TotMat(1:ntot_u,ntot_u+1:ntot)=-C;
-%
-Ftot=sparse(ntot,1);
-Ftot(1:ntot_u)=Fbody;
-Ftot(ktl_flux+ntot_u)=-flux;
+test = ones(size(Id_p,1),1);
+p_u = -AA\(-flux*test();
 
-eq_free=[eq_free_u;ntot_u   + Id_p(:)];%+eq_free_p];
-Undrained_sol=sparse(ntot,1);
-Undrained_sol(eq_free) = TotMat(eq_free,eq_free)\Ftot(eq_free);
-
-pp_o=Undrained_sol(ntot_u   + Id_p(:));
-U_o=sparse(ntot_u,1);
-U_o(eq_free_u) = Undrained_sol(eq_free_u);
-%  
-
-% reshape Usol_u
-udisp = [U_o(ID_array(:,1)) U_o(ID_array(:,2))];
-
-% plot deformed mesh
-figure(3)
-plotmesh(mesh.XY,connect,[.0 .0 .0],'w')
-hold on;
-plotmesh(mesh.XY+3*udisp,connect,[.0 1 .0],'none')
 
 % t=0+ solution is the undrained response
 %pp_o=ones(mesh_fem.FEnode.n_tot,1)*Pp_u_u;
-pp_o(eq_fix_p)=0.   ; % NOW we fix the pore pressure to zero. 
+p_u(eq_fix_p)=0.   ; % NOW we fix the pore pressure to zero. 
 
 figure(4) 
-trisurf(mesh.conn,mesh.XY(:,1),mesh.XY(:,2),full(pp_o))
+trisurf(mesh.conn,mesh.XY(:,1),mesh.XY(:,2),full(p_u))
  
 %%
 
@@ -284,6 +261,11 @@ for i=2:n_step
     U_o=U_o+D_U;
     
     u_surf = [u_surf U_o(2)];
+    
+    if mod(i,50) == 0
+        figure(8) 
+        trisurf(mesh.conn,mesh.XY(:,1),mesh.XY(:,2),full(pp_o))
+    end
     
  %   hist_ur_10(i)=U_o(10);
     

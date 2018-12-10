@@ -16,8 +16,8 @@ H4 = 1000;
 % Mesh PARAMETERS
 Hs = [0,100;
     -H1,100;
-    -H2,50; 
-    -H3,50;
+    -H2,25; 
+    -H3,25;
     -H4,100];
 % Mesh GENERATION
 [vert,etri, tria,tnum] = stratimesher(L, Hs);
@@ -61,7 +61,7 @@ Config='Axis';
 %
 % MATERIAL PROPERTIES
 % all stiffness in MPa, ohio Sandstone
-K_darcy = [1e-7,1e-12,1e-8,1e-12]; % Permeability
+K_darcy = [1e-7,1e-12,1e-6,1e-12]; % Permeability
 cm = [1e-9, 1e-10, 1e-10, 1e-10]; % Compressibility
 nu = [0.3, 0.3, 0.3, 0.3];
 E = (1+nu).*(1-2*nu)./(cm.*(1-nu));
@@ -237,7 +237,7 @@ trisurf(mesh.conn,mesh.XY(:,1),mesh.XY(:,2),full(pp_o))
 
 %%%%%%
 
-
+pp_o(:) = 2e5;
 u_surf = [0];
 eq_free=[eq_free_u;ntot_u+eq_free_p];
 
@@ -248,7 +248,7 @@ dt = 1/1.01;
 n_step=n_iter;
 time = [0];
 % time loop -- 
-for i=2:n_step
+for i=2:n_iter
     
     dt=dt*1.01;
     time = [time, time(end)+dt];
@@ -270,7 +270,9 @@ for i=2:n_step
      
     D_x=[D_U; Dp];
     
-    po_lhs=dt*(D(eq_free_p,:)*pp_o(:)-flux);
+    test = zeros(ntot_p,1);
+    test(ktl_flux)=-flux;
+    po_lhs=dt*(D(eq_free_p,:)*pp_o(:)+test);
     
     P_s=sparse(ntot,1);
     
@@ -286,6 +288,11 @@ for i=2:n_step
     
     u_surf = [u_surf U_o(2)];
     
+%     if mod(i,50) == 0
+%         figure(8) 
+%         trisurf(mesh.conn,mesh.XY(:,1),mesh.XY(:,2),full(pp_o))
+%     end
+    
  %   hist_ur_10(i)=U_o(10);
     
 end
@@ -298,8 +305,13 @@ udisp = [U_o(ID_array(:,1)) U_o(ID_array(:,2))];
 
 plotmesh(mesh.XY,connect,[.2 .2 .2],'w')
 hold on;
-plotmesh(mesh.XY+udisp,connect,[.8 .2 .2],'none')
+plotmesh(mesh.XY+udisp*1e5,connect,[.8 .2 .2],'none')
 
 figure(8) 
 trisurf(mesh.conn,mesh.XY(:,1),mesh.XY(:,2),full(pp_o))
- 
+
+%%
+
+ktl_long=find(mesh.XY(:,2)==-725);
+
+plot(the_coor(ktl_long),pp_o(ktl_long),'*')
