@@ -83,6 +83,11 @@ L_u=Elastic_Isotropic_Stiffness(k_u,g,'Axis');
 % drained elastic stiffness tensor
 L_d=Elastic_Isotropic_Stiffness(k,g,'Axis');
 
+proplist_elast={L_d,L_d,L_d,L_d};
+proplist_kappa={kappa,kappa,kappa,kappa};
+proplist_mass={1./M,1./M,1./M,1./M};
+proplist_coupling={b,b,b,b};
+
 
 %% Boundary Condition
 klt_down = find(mesh.XY(:,2)==-H4);
@@ -137,8 +142,8 @@ mySig_o= zeros(mesh.Nelts,4);  % 4 components in 2D axi-symmetry (srr, szz, srz,
 %% different matrices
 
 % elasticity
-proplist={L_d,L_d,L_d,L_d};
-[K,ID_array]=AssembleMatrix(mesh,'Axis','Elasticity',proplist,3);
+
+[K,ID_array]=AssembleMatrix(mesh,'Axis','Elasticity',proplist_elast,3);
 
 %[Fflux]=AssembleVectorBoundaryTerm(mesh,'Axis','BoundaryLoads',flux_load,ID_array,3);
 [Fbody]=AssembleVectorVolumeTerm(mesh,'Axis','InitialStress',mySig_o,ID_array,3);
@@ -148,20 +153,20 @@ Fload=Fbody*0;
 [eq_free_u,fix_nonZero_u,eq_fix_u]=PrepareDirichletBC(Imp_displacement,ID_array);
 
 % mass matrix term
-proplist={1./M};
-[S,Id_p]=AssembleMatrix(mesh,'Axis','Mass',proplist,3);
+
+[S,Id_p]=AssembleMatrix(mesh,'Axis','Mass',proplist_mass,3);
 %% pore-pressure fixed to zero on the outer radius.
 eq_free_p=[Id_p(ktl_flux)  ];
 eq_fix_p=setdiff(Id_p(:),eq_free_p(:));
 
 
 % laplacian term
-proplist={kappa};
-[D,Id_p]=AssembleMatrix(mesh,'Axis','Laplacian',proplist,3);
+
+[D,Id_p]=AssembleMatrix(mesh,'Axis','Laplacian',proplist_kappa,3);
 
 % Coupling term 
-proplist={b};
-[C,Id_u,Id_p]=AssembleCouplingMatrix(mesh,mesh,'Axis',proplist,3);
+
+[C,Id_u,Id_p]=AssembleCouplingMatrix(mesh,mesh,'Axis',proplist_coupling,3);
 %%
 ntot_u=length(Id_u(:));
 ntot_p=length(Id_p(:));
